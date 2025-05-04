@@ -110,6 +110,7 @@ public class TetrisGame extends JFrame {
     }
 
     private void clearFullRows() {
+      int linesCleared = 0;
         for (int r = ROWS - 1; r >= 0; r--) {
             boolean full = true;
             for (int c = 0; c < COLS; c++) {
@@ -119,14 +120,28 @@ public class TetrisGame extends JFrame {
                 }
             }
             if (full) {
+            linesCleared++;
                 for (int i = r; i > 0; i--) {
                     board[i] = Arrays.copyOf(board[i - 1], COLS);
                 }
                 Arrays.fill(board[0], null);
-                score++;
                 r++; // 檢查新的一列
             }
         }
+        switch (linesCleared) {
+        case 1:
+            score += 40;
+            break;
+        case 2:
+            score += 100;
+            break;
+        case 3:
+            score += 300;
+            break;
+        case 4:
+            score += 1200;
+            break;
+      }   
     }
 
     private void spawnPiece() {

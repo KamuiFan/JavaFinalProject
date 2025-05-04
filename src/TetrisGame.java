@@ -57,26 +57,34 @@ public class TetrisGame extends JFrame {
               if (gameOver) return;
       
               int key = e.getKeyCode();
+      
               if (key == KeyEvent.VK_SPACE) {
-                  paused = !paused;
+                  paused = !paused;  // 切換暫停狀態
                   if (paused) {
-                      timer.stop();
-                      JOptionPane.showMessageDialog(TetrisGame.this, "遊戲已暫停，按空白鍵繼續");
+                      timer.stop();  // 停止計時器
                   } else {
-                      timer.start();
+                      timer.start();  // 重新啟動計時器
                   }
+                  gamePanel.repaint();  // 讓主畫面重繪，顯示暫停字樣
+                  nextPanel.repaint();  // 讓預覽區也重繪
                   return;
               }
       
-              if (paused) return;
+              if (paused) return; // 如果是暫停狀態，不接受其他操作
       
+              // 正常遊戲操作
               if (key == KeyEvent.VK_LEFT) movePiece(-1);
               else if (key == KeyEvent.VK_RIGHT) movePiece(1);
               else if (key == KeyEvent.VK_DOWN) movePieceDown();
               else if (key == KeyEvent.VK_UP) rotatePiece();
-              gamePanel.repaint();
+      
+              gamePanel.repaint();  // 重新繪製遊戲畫面
           }
       });
+
+
+
+
 
 
         spawnPiece();
@@ -255,20 +263,32 @@ public class TetrisGame extends JFrame {
         }
 
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            g.setColor(Color.BLACK);
-            g.setFont(new Font("Arial", Font.BOLD, 16)); // 放大字體大小
-            g.drawString("Next:", 10, 20);
+          super.paintComponent(g);
+          g.setColor(Color.BLACK);
+          g.fillRect(0, 0, getWidth(), getHeight()); // 填滿背景
+      
+          g.setFont(new Font("Arial", Font.BOLD, 16));
+          g.setColor(Color.WHITE);
+          g.drawString("Next:", 10, 20);
+      
+          if (TetrisGame.this.paused) {
+              // 顯示 PAUSED 字樣（可調整位置與字體大小）
+              g.setColor(Color.YELLOW);
+              g.setFont(new Font("Arial", Font.BOLD, 24));
+              g.drawString("PAUSED", 10, 60);
+              return; // 不畫出方塊
+          }
+      
+          if (nextPiece != null) {
+              g.setColor(nextPiece.getColor());
+              for (Point p : nextPiece.getBlocks()) {
+                  int px = (p.y + 1) * CELL_SIZE;
+                  int py = (p.x + 1) * CELL_SIZE;
+                  g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+              }
+          }
+      }
 
-            if (nextPiece != null) {
-                g.setColor(nextPiece.getColor());
-                for (Point p : nextPiece.getBlocks()) {
-                    int px = (p.y + 1) * CELL_SIZE;
-                    int py = (p.x + 1) * CELL_SIZE;
-                    g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                }
-            }
-        }
     }
 
     public static void main(String[] args) {

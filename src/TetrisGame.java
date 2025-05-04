@@ -14,6 +14,21 @@ public class TetrisGame extends JFrame {
     private javax.swing.Timer timer; // Explicitly using javax.swing.Timer
     private int score = 0;
     private boolean gameOver = false;
+    private Tetromino nextPiece;
+    
+    private Tetromino generateRandomPiece() {
+    Tetromino[] pieces = new Tetromino[] {
+        new IShape(0, 0, false),
+        new OShape(0, 0),
+        new TShape(0, 0, 0),
+        new SShape(0, 0, false),
+        new ZShape(0, 0, false),
+        new JShape(0, 0, 0),
+        new LShape(0, 0, 0)
+    };
+    return pieces[new Random().nextInt(pieces.length)];
+   }
+
 
     public TetrisGame() {
         setTitle("Tetris");
@@ -22,7 +37,25 @@ public class TetrisGame extends JFrame {
         setLocationRelativeTo(null);
 
         gamePanel = new GamePanel();
-        add(gamePanel);
+        JPanel rightPanel = new JPanel() {
+           protected void paintComponent(Graphics g) {
+               super.paintComponent(g);
+               if (nextPiece != null) {
+                  g.setColor(nextPiece.getColor());
+                  for (Point p : nextPiece.getBlocks()) {
+                     int px = (p.y + 1) * CELL_SIZE;
+                     int py = (p.x + 1) * CELL_SIZE;
+                     g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                  }
+               }
+            }
+         };
+         rightPanel.setPreferredSize(new Dimension(5 * CELL_SIZE, 5 * CELL_SIZE));
+
+         setLayout(new BorderLayout());
+         add(gamePanel, BorderLayout.CENTER);
+         add(rightPanel, BorderLayout.EAST);
+
 
         addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -43,6 +76,7 @@ public class TetrisGame extends JFrame {
             if (!gameOver) {
                 movePieceDown();
                 gamePanel.repaint();
+                repaint();
             }
         });
 
@@ -109,22 +143,22 @@ public class TetrisGame extends JFrame {
 
 
     private void spawnPiece() {
-        Tetromino[] pieces = new Tetromino[] {
-            new IShape(0, COLS / 2, false),
-            new OShape(0, COLS / 2),
-            new TShape(0, COLS / 2, 0),
-            new SShape(0, COLS / 2, false),
-            new ZShape(0, COLS / 2, false),
-            new JShape(0, COLS / 2, 0),
-            new LShape(0, COLS / 2, 0)
-        };
-        currentPiece = pieces[new Random().nextInt(pieces.length)];
-        if (collision(currentPiece, 0, 0)) {
-            gameOver = true;
-            timer.stop();
-            JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
-        }
+    if (nextPiece == null) {
+        nextPiece = generateRandomPiece();
     }
+    currentPiece = nextPiece;
+    currentPiece.row = 0;
+    currentPiece.col = COLS / 2;
+
+    nextPiece = generateRandomPiece(); // 預先準備下一個
+
+    if (collision(currentPiece, 0, 0)) {
+        gameOver = true;
+        timer.stop();
+        JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
+    }
+   }
+
 
     class GamePanel extends JPanel {
         public void paintComponent(Graphics g) {

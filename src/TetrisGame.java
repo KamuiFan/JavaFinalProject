@@ -173,7 +173,10 @@ public class TetrisGame extends JFrame {
                     g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 }
             }
+
+            // 設定放大字體
             g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 18));  // 放大字體大小
             g.drawString("Score: " + score, 10, 20);
         }
     }
@@ -187,8 +190,10 @@ public class TetrisGame extends JFrame {
 
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            g.setColor(Color.WHITE);
+            g.setColor(Color.BLACK);
+            g.setFont(new Font("Arial", Font.BOLD, 16)); // 放大字體大小
             g.drawString("Next:", 10, 20);
+
             if (nextPiece != null) {
                 g.setColor(nextPiece.getColor());
                 for (Point p : nextPiece.getBlocks()) {

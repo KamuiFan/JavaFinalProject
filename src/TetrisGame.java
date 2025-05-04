@@ -15,47 +15,35 @@ public class TetrisGame extends JFrame {
     private int score = 0;
     private boolean gameOver = false;
     private Tetromino nextPiece;
-    
-    private Tetromino generateRandomPiece() {
-    Tetromino[] pieces = new Tetromino[] {
-        new IShape(0, 0, false),
-        new OShape(0, 0),
-        new TShape(0, 0, 0),
-        new SShape(0, 0, false),
-        new ZShape(0, 0, false),
-        new JShape(0, 0, 0),
-        new LShape(0, 0, 0)
-    };
-    return pieces[new Random().nextInt(pieces.length)];
-   }
+    private NextPanel nextPanel;  // 用來顯示下一個方塊
 
+    private Tetromino generateRandomPiece() {
+        Tetromino[] pieces = new Tetromino[] {
+            new IShape(0, 0, false),
+            new OShape(0, 0),
+            new TShape(0, 0, 0),
+            new SShape(0, 0, false),
+            new ZShape(0, 0, false),
+            new JShape(0, 0, 0),
+            new LShape(0, 0, 0)
+        };
+        return pieces[new Random().nextInt(pieces.length)];
+    }
 
     public TetrisGame() {
         setTitle("Tetris");
-        setSize(COLS * CELL_SIZE + 16, ROWS * CELL_SIZE + 39);
+        setSize(COLS * CELL_SIZE + 16 + 6 * CELL_SIZE, ROWS * CELL_SIZE + 39);  // 增加右邊預覽區域的寬度
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         gamePanel = new GamePanel();
-        JPanel rightPanel = new JPanel() {
-           protected void paintComponent(Graphics g) {
-               super.paintComponent(g);
-               if (nextPiece != null) {
-                  g.setColor(nextPiece.getColor());
-                  for (Point p : nextPiece.getBlocks()) {
-                     int px = (p.y + 1) * CELL_SIZE;
-                     int py = (p.x + 1) * CELL_SIZE;
-                     g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-                  }
-               }
-            }
-         };
-         rightPanel.setPreferredSize(new Dimension(5 * CELL_SIZE, 5 * CELL_SIZE));
+        nextPanel = new NextPanel(); // 初始化下一個方塊面板
 
-         setLayout(new BorderLayout());
-         add(gamePanel, BorderLayout.CENTER);
-         add(rightPanel, BorderLayout.EAST);
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(gamePanel, BorderLayout.CENTER);
+        mainPanel.add(nextPanel, BorderLayout.EAST); // 右邊顯示下一個方塊
 
+        add(mainPanel);
 
         addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -76,7 +64,7 @@ public class TetrisGame extends JFrame {
             if (!gameOver) {
                 movePieceDown();
                 gamePanel.repaint();
-                repaint();
+                nextPanel.repaint();  // 更新下一個方塊的顯示
             }
         });
 
@@ -122,45 +110,48 @@ public class TetrisGame extends JFrame {
     }
 
     private void clearFullRows() {
-    for (int r = ROWS - 1; r >= 0; r--) {
-        boolean full = true;
-        for (int c = 0; c < COLS; c++) {
-            if (board[r][c] == null) {
-                full = false;
-                break;
+        for (int r = ROWS - 1; r >= 0; r--) {
+            boolean full = true;
+            for (int c = 0; c < COLS; c++) {
+                if (board[r][c] == null) {
+                    full = false;
+                    break;
+                }
             }
-        }
-        if (full) {
-            for (int i = r; i > 0; i--) {
-                board[i] = Arrays.copyOf(board[i - 1], COLS);
+            if (full) {
+                for (int i = r; i > 0; i--) {
+                    board[i] = Arrays.copyOf(board[i - 1], COLS);
+                }
+                Arrays.fill(board[0], null);
+                score++;
+                r++; // 檢查新的一列
             }
-            Arrays.fill(board[0], null);
-            score++;
-            r++; // 檢查新的一列
         }
     }
-}
-
 
     private void spawnPiece() {
-    if (nextPiece == null) {
-        nextPiece = generateRandomPiece();
+        if (nextPiece == null) {
+            nextPiece = generateRandomPiece();
+        }
+        currentPiece = nextPiece;
+        currentPiece.row = 0;
+        currentPiece.col = COLS / 2;
+
+        nextPiece = generateRandomPiece(); // 預先準備下一個
+
+        if (collision(currentPiece, 0, 0)) {
+            gameOver = true;
+            timer.stop();
+            JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
+        }
     }
-    currentPiece = nextPiece;
-    currentPiece.row = 0;
-    currentPiece.col = COLS / 2;
 
-    nextPiece = generateRandomPiece(); // 預先準備下一個
-
-    if (collision(currentPiece, 0, 0)) {
-        gameOver = true;
-        timer.stop();
-        JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
-    }
-   }
-
-
+    // 遊戲畫面
     class GamePanel extends JPanel {
+        public GamePanel() {
+            setBackground(Color.BLACK); // 設置背景顏色為黑色
+        }
+
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             for (int r = 0; r < ROWS; r++) {
@@ -168,11 +159,10 @@ public class TetrisGame extends JFrame {
                     if (board[r][c] != null) {
                         g.setColor(board[r][c]);
                         g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                     } else {
+                    } else {
                         g.setColor(Color.LIGHT_GRAY);
                         g.drawRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                     }
-
+                    }
                 }
             }
             if (currentPiece != null) {
@@ -183,8 +173,30 @@ public class TetrisGame extends JFrame {
                     g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 }
             }
-            g.setColor(Color.BLACK);
+            g.setColor(Color.WHITE);
             g.drawString("Score: " + score, 10, 20);
+        }
+    }
+
+    // 下一個方塊面板
+    class NextPanel extends JPanel {
+        public NextPanel() {
+            setPreferredSize(new Dimension(5 * CELL_SIZE, 5 * CELL_SIZE));
+            setBorder(BorderFactory.createLineBorder(Color.WHITE)); // 設置邊框
+        }
+
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            g.setColor(Color.WHITE);
+            g.drawString("Next:", 10, 20);
+            if (nextPiece != null) {
+                g.setColor(nextPiece.getColor());
+                for (Point p : nextPiece.getBlocks()) {
+                    int px = (p.y + 1) * CELL_SIZE;
+                    int py = (p.x + 1) * CELL_SIZE;
+                    g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                }
+            }
         }
     }
 

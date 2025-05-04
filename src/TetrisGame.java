@@ -1,7 +1,13 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Random;
 
 public class TetrisGame extends JFrame {
     public static final int ROWS = 20;
@@ -16,6 +22,7 @@ public class TetrisGame extends JFrame {
     private boolean gameOver = false;
     private Tetromino nextPiece;
     private NextPanel nextPanel;  // 用來顯示下一個方塊
+    private boolean paused = false;
 
     private Tetromino generateRandomPiece() {
         Tetromino[] pieces = new Tetromino[] {
@@ -46,16 +53,31 @@ public class TetrisGame extends JFrame {
         add(mainPanel);
 
         addKeyListener(new KeyAdapter() {
-            public void keyPressed(KeyEvent e) {
-                if (gameOver) return;
-                int key = e.getKeyCode();
-                if (key == KeyEvent.VK_LEFT) movePiece(-1);
-                else if (key == KeyEvent.VK_RIGHT) movePiece(1);
-                else if (key == KeyEvent.VK_DOWN) movePieceDown();
-                else if (key == KeyEvent.VK_UP) rotatePiece();
-                gamePanel.repaint();
-            }
-        });
+          public void keyPressed(KeyEvent e) {
+              if (gameOver) return;
+      
+              int key = e.getKeyCode();
+              if (key == KeyEvent.VK_SPACE) {
+                  paused = !paused;
+                  if (paused) {
+                      timer.stop();
+                      JOptionPane.showMessageDialog(TetrisGame.this, "遊戲已暫停，按空白鍵繼續");
+                  } else {
+                      timer.start();
+                  }
+                  return;
+              }
+      
+              if (paused) return;
+      
+              if (key == KeyEvent.VK_LEFT) movePiece(-1);
+              else if (key == KeyEvent.VK_RIGHT) movePiece(1);
+              else if (key == KeyEvent.VK_DOWN) movePieceDown();
+              else if (key == KeyEvent.VK_UP) rotatePiece();
+              gamePanel.repaint();
+          }
+      });
+
 
         spawnPiece();
 
@@ -110,39 +132,68 @@ public class TetrisGame extends JFrame {
     }
 
     private void clearFullRows() {
-      int linesCleared = 0;
-        for (int r = ROWS - 1; r >= 0; r--) {
-            boolean full = true;
+    List<Integer> fullRows = new ArrayList<>();
+
+    for (int r = 0; r < ROWS; r++) {
+        boolean full = true;
+        for (int c = 0; c < COLS; c++) {
+            if (board[r][c] == null) {
+                full = false;
+                break;
+            }
+        }
+        if (full) fullRows.add(r);
+    }
+
+    if (fullRows.isEmpty()) return;
+
+    // 閃爍兩次（清空 -> 還原 -> 清空 -> 還原）
+    final int[] flashCount = {0};
+    final Map<Integer, Color[]> rowBackup = new HashMap<>();
+    for (int r : fullRows) {
+        rowBackup.put(r, Arrays.copyOf(board[r], COLS));
+    }
+
+    javax.swing.Timer flashTimer = new javax.swing.Timer(100, null);
+    flashTimer.addActionListener(e -> {
+        for (int r : fullRows) {
             for (int c = 0; c < COLS; c++) {
-                if (board[r][c] == null) {
-                    full = false;
-                    break;
+                if (flashCount[0] % 2 == 0) {
+                    board[r][c] = null; // 清空
+                } else {
+                    board[r][c] = rowBackup.get(r)[c]; // 還原
                 }
             }
-            if (full) {
-            linesCleared++;
+        }
+        gamePanel.repaint();
+        flashCount[0]++;
+
+        if (flashCount[0] >= 4) {
+            flashTimer.stop();
+
+            // 真正消除行
+            for (int r : fullRows) {
                 for (int i = r; i > 0; i--) {
                     board[i] = Arrays.copyOf(board[i - 1], COLS);
                 }
                 Arrays.fill(board[0], null);
-                r++; // 檢查新的一列
             }
+
+            // 加分
+            switch (fullRows.size()) {
+                case 1: score += 40; break;
+                case 2: score += 100; break;
+                case 3: score += 300; break;
+                case 4: score += 1200; break;
+            }
+
+            gamePanel.repaint();
         }
-        switch (linesCleared) {
-        case 1:
-            score += 40;
-            break;
-        case 2:
-            score += 100;
-            break;
-        case 3:
-            score += 300;
-            break;
-        case 4:
-            score += 1200;
-            break;
-      }   
-    }
+    });
+
+    flashTimer.start();
+}
+
 
     private void spawnPiece() {
         if (nextPiece == null) {

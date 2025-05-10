@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Random;
+import javax.sound.sampled.*;
+import java.io.File;
+import java.io.IOException;
 
 public class TetrisGame extends JFrame {
     public static final int ROWS = 20;
@@ -105,6 +108,17 @@ public class TetrisGame extends JFrame {
         if (currentPiece == null) return;
         if (!collision(currentPiece, 0, dx)) currentPiece.col += dx;
     }
+    
+    private void playClearSound() {
+        try {
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File("Game Boy GBC - Tetris - Sound Effects/Tetris (GB) (19)-rotate_piece.wav"));
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioInputStream);
+            clip.start();
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void movePieceDown() {
         if (currentPiece == null) return;
@@ -194,7 +208,7 @@ public class TetrisGame extends JFrame {
                 case 3: score += 300; break;
                 case 4: score += 1200; break;
             }
-
+            playClearSound();
             gamePanel.repaint();
         }
     });

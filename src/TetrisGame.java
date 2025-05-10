@@ -106,25 +106,21 @@ public class TetrisGame extends JFrame {
 
     private void movePiece(int dx) {
         if (currentPiece == null) return;
-        if (!collision(currentPiece, 0, dx)) currentPiece.col += dx;
-    }
-    
-    private void playClearSound() {
-        try {
-            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File("Game Boy GBC - Tetris - Sound Effects/Tetris (GB) (19)-rotate_piece.wav"));
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioInputStream);
-            clip.start();
-        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            e.printStackTrace();
+        if (!collision(currentPiece, 0, dx)){
+            currentPiece.col += dx;
+            SoundPlayer.playSound("Sound Effects/move_piece.wav");
         }
     }
 
     private void movePieceDown() {
         if (currentPiece == null) return;
-        if (!collision(currentPiece, 1, 0)) currentPiece.row++;
+        if (!collision(currentPiece, 1, 0)){
+            currentPiece.row++;
+            SoundPlayer.playSound("Sound Effects/piece_falling.wav");
+        }
         else {
             addPieceToBoard(currentPiece);
+            SoundPlayer.playSound("Sound Effects/piece_landed.wav");
             clearFullRows();
             spawnPiece();
         }
@@ -132,7 +128,10 @@ public class TetrisGame extends JFrame {
 
     private void rotatePiece() {
         Tetromino rotated = currentPiece.getRotated();
-        if (!collision(rotated, 0, 0)) currentPiece = rotated;
+        if (!collision(rotated, 0, 0)){
+            currentPiece = rotated;
+            SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
+        }
     }
 
     private boolean collision(Tetromino piece, int dRow, int dCol) {
@@ -203,12 +202,19 @@ public class TetrisGame extends JFrame {
 
             // 加分
             switch (fullRows.size()) {
-                case 1: score += 40; break;
-                case 2: score += 100; break;
-                case 3: score += 300; break;
-                case 4: score += 1200; break;
+                case 1: score += 40;
+                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                     break;
+                case 2: score += 100;
+                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                     break;
+                case 3: score += 300;
+                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                     break;
+                case 4: score += 1200;
+                     SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
+                     break;
             }
-            playClearSound();
             gamePanel.repaint();
         }
     });
@@ -304,6 +310,19 @@ public class TetrisGame extends JFrame {
       }
 
     }
+    
+    public class SoundPlayer {
+       public static void playSound(String path) {
+           try {
+               AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(path));
+               Clip clip = AudioSystem.getClip();
+               clip.open(audioInputStream);
+               clip.start();
+           } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+               e.printStackTrace();
+           }
+       }
+   }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new TetrisGame().setVisible(true));

@@ -116,7 +116,6 @@ public class TetrisGame extends JFrame {
         if (currentPiece == null) return;
         if (!collision(currentPiece, 1, 0)){
             currentPiece.row++;
-            SoundPlayer.playSound("Sound Effects/piece_falling.wav");
         }
         else {
             addPieceToBoard(currentPiece);
@@ -236,6 +235,7 @@ public class TetrisGame extends JFrame {
         if (collision(currentPiece, 0, 0)) {
             gameOver = true;
             timer.stop();
+            SoundPlayer.playSound("Sound Effects/game_over.wav");
             JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
         }
     }
@@ -317,6 +317,9 @@ public class TetrisGame extends JFrame {
                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(path));
                Clip clip = AudioSystem.getClip();
                clip.open(audioInputStream);
+               FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+               // 設定音量（以 decibel 為單位，0.0f 為原始音量，負數是減小音量）
+               gainControl.setValue(-30f); // 例如 -10.0f 表示小聲一點
                clip.start();
            } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
                e.printStackTrace();

@@ -20,114 +20,132 @@ public class TetrisGame extends JFrame {
     private GamePanel gamePanel;
     private Color[][] board = new Color[ROWS][COLS];
     private Tetromino currentPiece;
-    private javax.swing.Timer timer; // Explicitly using javax.swing.Timer
+    private javax.swing.Timer timer;
     private int score = 0;
     private boolean gameOver = false;
     private Tetromino nextPiece;
-    private NextPanel nextPanel;  // 用來顯示下一個方塊
+    private NextPanel nextPanel;
     private boolean paused = false;
+    private int linesCleared = 0;             // 累計消除行數
+    private int level = 1;                    // 目前等級
+    private final int baseDelay = 500;        // Level 1 時的初始 delay
+    private final int delayStep = 50;         // 每升一級，delay 減少多少毫秒
 
-    private Tetromino generateRandomPiece() {
-        Tetromino[] pieces = new Tetromino[] {
-            new IShape(0, 0, false),
-            new OShape(0, 0),
-            new TShape(0, 0, 0),
-            new SShape(0, 0, false),
-            new ZShape(0, 0, false),
-            new JShape(0, 0, 0),
-            new LShape(0, 0, 0)
-        };
-        return pieces[new Random().nextInt(pieces.length)];
-    }
+    // 長按聲效控制
+    private javax.swing.Timer longPressTimer = null;
+    private boolean longPressSoundPlayed = false;
+    private final int longPressThreshold = 500;  // 長按判定時間 (ms)
+
+    private final int normalDelay = 500;
 
     public TetrisGame() {
         setTitle("Tetris");
-        setSize(COLS * CELL_SIZE + 16 + 6 * CELL_SIZE, ROWS * CELL_SIZE + 39);  // 增加右邊預覽區域的寬度
+        setSize(COLS * CELL_SIZE + 16 + 6 * CELL_SIZE, ROWS * CELL_SIZE + 39);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         gamePanel = new GamePanel();
-        nextPanel = new NextPanel(); // 初始化下一個方塊面板
-
+        nextPanel = new NextPanel();
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(gamePanel, BorderLayout.CENTER);
-        mainPanel.add(nextPanel, BorderLayout.EAST); // 右邊顯示下一個方塊
-
+        mainPanel.add(nextPanel, BorderLayout.EAST);
         add(mainPanel);
 
         addKeyListener(new KeyAdapter() {
-          public void keyPressed(KeyEvent e) {
-              if (gameOver) return;
-      
-              int key = e.getKeyCode();
-      
-              if (key == KeyEvent.VK_SPACE) {
-                  paused = !paused;  // 切換暫停狀態
-                  if (paused) {
-                      timer.stop();  // 停止計時器
-                  } else {
-                      timer.start();  // 重新啟動計時器
-                  }
-                  gamePanel.repaint();  // 讓主畫面重繪，顯示暫停字樣
-                  nextPanel.repaint();  // 讓預覽區也重繪
-                  return;
-              }
-      
-              if (paused) return; // 如果是暫停狀態，不接受其他操作
-      
-              // 正常遊戲操作
-              if (key == KeyEvent.VK_LEFT) movePiece(-1);
-              else if (key == KeyEvent.VK_RIGHT) movePiece(1);
-              else if (key == KeyEvent.VK_DOWN) movePieceDown();
-              else if (key == KeyEvent.VK_UP) rotatePiece();
-      
-              gamePanel.repaint();  // 重新繪製遊戲畫面
-          }
-      });
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (gameOver) return;
+                int key = e.getKeyCode();
 
+                if (key == KeyEvent.VK_SPACE) {
+                    paused = !paused;
+                    if (paused) timer.stop(); else timer.start();
+                    repaintAll();
+                    return;
+                }
+                if (paused) return;
 
+                if (key == KeyEvent.VK_DOWN) {
+                    // 每次按下，立即下移一格
+                    movePieceDown();
+                    // 長按聲效偵測
+                    if (!longPressSoundPlayed && longPressTimer == null) {
+                        longPressTimer = new javax.swing.Timer(longPressThreshold, ev -> {
+                            SoundPlayer.playSound("Sound Effects/player_sending_blocks.wav");
+                            longPressSoundPlayed = true;
+                            longPressTimer.stop();
+                            longPressTimer = null;
+                        });
+                        longPressTimer.setRepeats(false);
+                        longPressTimer.start();
+                    }
+                } else if (key == KeyEvent.VK_LEFT) {
+                    movePiece(-1);
+                } else if (key == KeyEvent.VK_RIGHT) {
+                    movePiece(1);
+                } else if (key == KeyEvent.VK_UP) {
+                    rotatePiece();
+                }
+                repaintAll();
+            }
 
-
-
-
-        spawnPiece();
-
-        // Timer to move the piece down at a regular interval
-        timer = new javax.swing.Timer(500, e -> {
-            if (!gameOver) {
-                movePieceDown();
-                gamePanel.repaint();
-                nextPanel.repaint();  // 更新下一個方塊的顯示
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    // 取消長按偵測，不持續播放聲音
+                    if (longPressTimer != null) {
+                        longPressTimer.stop();
+                        longPressTimer = null;
+                    }
+                    longPressSoundPlayed = false;
+                }
             }
         });
 
+        spawnPiece();
+        timer = new javax.swing.Timer(calculateDelay(), e -> {
+            if (gameOver || paused) return;
+            movePieceDown();
+            repaintAll();
+        });
         timer.start();
+    }
+
+    private void repaintAll() {
+        gamePanel.repaint();
+        nextPanel.repaint();
+    }
+    
+    private int calculateDelay() {
+        int d = baseDelay - (level - 1) * delayStep;
+        return Math.max(50, d);   // 最低不要低於 50ms
     }
 
     private void movePiece(int dx) {
         if (currentPiece == null) return;
-        if (!collision(currentPiece, 0, dx)){
+        if (!collision(currentPiece, 0, dx)) {
             currentPiece.col += dx;
             SoundPlayer.playSound("Sound Effects/move_piece.wav");
         }
     }
 
-    private void movePieceDown() {
-        if (currentPiece == null) return;
-        if (!collision(currentPiece, 1, 0)){
+    private boolean movePieceDown() {
+        if (currentPiece == null) return false;
+        if (!collision(currentPiece, 1, 0)) {
             currentPiece.row++;
-        }
-        else {
+            return true;
+        } else {
             addPieceToBoard(currentPiece);
             SoundPlayer.playSound("Sound Effects/piece_landed.wav");
             clearFullRows();
             spawnPiece();
+            return false;
         }
     }
 
     private void rotatePiece() {
         Tetromino rotated = currentPiece.getRotated();
-        if (!collision(rotated, 0, 0)){
+        if (!collision(rotated, 0, 0)) {
             currentPiece = rotated;
             SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
         }
@@ -153,7 +171,7 @@ public class TetrisGame extends JFrame {
 
     private void clearFullRows() {
     List<Integer> fullRows = new ArrayList<>();
-
+    // 找出所有已填滿的列
     for (int r = 0; r < ROWS; r++) {
         boolean full = true;
         for (int c = 0; c < COLS; c++) {
@@ -164,34 +182,32 @@ public class TetrisGame extends JFrame {
         }
         if (full) fullRows.add(r);
     }
-
     if (fullRows.isEmpty()) return;
 
-    // 閃爍兩次（清空 -> 還原 -> 清空 -> 還原）
-    final int[] flashCount = {0};
+    // 備份要消除的那幾列，用於閃爍還原
     final Map<Integer, Color[]> rowBackup = new HashMap<>();
     for (int r : fullRows) {
         rowBackup.put(r, Arrays.copyOf(board[r], COLS));
     }
+    final int[] flashCount = {0};
 
+    // 閃爍定時器
     javax.swing.Timer flashTimer = new javax.swing.Timer(100, null);
     flashTimer.addActionListener(e -> {
+        // 閃爍：淘汰列交替清空／還原
         for (int r : fullRows) {
             for (int c = 0; c < COLS; c++) {
-                if (flashCount[0] % 2 == 0) {
-                    board[r][c] = null; // 清空
-                } else {
-                    board[r][c] = rowBackup.get(r)[c]; // 還原
-                }
+                board[r][c] = (flashCount[0] % 2 == 0) ? null : rowBackup.get(r)[c];
             }
         }
         gamePanel.repaint();
         flashCount[0]++;
 
+        // 閃爍結束後真正消除、下移、加分與升級
         if (flashCount[0] >= 4) {
             flashTimer.stop();
 
-            // 真正消除行
+            // 真正消除：高列往下搬移
             for (int r : fullRows) {
                 for (int i = r; i > 0; i--) {
                     board[i] = Arrays.copyOf(board[i - 1], COLS);
@@ -199,39 +215,49 @@ public class TetrisGame extends JFrame {
                 Arrays.fill(board[0], null);
             }
 
-            // 加分
+            // 計算並加分
             switch (fullRows.size()) {
-                case 1: score += 40;
-                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                     break;
-                case 2: score += 100;
-                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                     break;
-                case 3: score += 300;
-                     SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                     break;
-                case 4: score += 1200;
-                     SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
-                     break;
+                case 1:
+                    score += 40;
+                    SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                    break;
+                case 2:
+                    score += 100;
+                    SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                    break;
+                case 3:
+                    score += 300;
+                    SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                    break;
+                case 4:
+                    score += 1200;
+                    SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
+                    break;
             }
+
+            // **1. 累計消除行數並計算新等級**
+            linesCleared += fullRows.size();
+            int newLevel = (linesCleared / 10) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                // **2. 更新自動下落速度**
+                timer.setDelay(calculateDelay());
+            }
+
             gamePanel.repaint();
         }
     });
-
+    flashTimer.setRepeats(true);
     flashTimer.start();
 }
 
 
     private void spawnPiece() {
-        if (nextPiece == null) {
-            nextPiece = generateRandomPiece();
-        }
+        if (nextPiece == null) nextPiece = generateRandomPiece();
         currentPiece = nextPiece;
         currentPiece.row = 0;
         currentPiece.col = COLS / 2;
-
-        nextPiece = generateRandomPiece(); // 預先準備下一個
-
+        nextPiece = generateRandomPiece();
         if (collision(currentPiece, 0, 0)) {
             gameOver = true;
             timer.stop();
@@ -240,12 +266,18 @@ public class TetrisGame extends JFrame {
         }
     }
 
-    // 遊戲畫面
-    class GamePanel extends JPanel {
-        public GamePanel() {
-            setBackground(Color.BLACK); // 設置背景顏色為黑色
-        }
+    private Tetromino generateRandomPiece() {
+        Tetromino[] pieces = new Tetromino[]{
+            new IShape(0, 0, false), new OShape(0, 0), new TShape(0, 0, 0),
+            new SShape(0, 0, false), new ZShape(0, 0, false),
+            new JShape(0, 0, 0), new LShape(0, 0, 0)
+        };
+        return pieces[new Random().nextInt(pieces.length)];
+    }
 
+    class GamePanel extends JPanel {
+        public GamePanel() { setBackground(Color.BLACK); }
+        @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             for (int r = 0; r < ROWS; r++) {
@@ -267,65 +299,55 @@ public class TetrisGame extends JFrame {
                     g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 }
             }
-
-            // 設定放大字體
             g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 18));  // 放大字體大小
+            g.setFont(new Font("Arial", Font.BOLD, 18));
             g.drawString("Score: " + score, 10, 20);
         }
     }
 
-    // 下一個方塊面板
     class NextPanel extends JPanel {
         public NextPanel() {
             setPreferredSize(new Dimension(5 * CELL_SIZE, 5 * CELL_SIZE));
-            setBorder(BorderFactory.createLineBorder(Color.WHITE)); // 設置邊框
+            setBorder(BorderFactory.createLineBorder(Color.WHITE));
         }
-
+        @Override
         protected void paintComponent(Graphics g) {
-          super.paintComponent(g);
-          g.setColor(Color.BLACK);
-          g.fillRect(0, 0, getWidth(), getHeight()); // 填滿背景
-      
-          g.setFont(new Font("Arial", Font.BOLD, 16));
-          g.setColor(Color.WHITE);
-          g.drawString("Next:", 10, 20);
-      
-          if (TetrisGame.this.paused) {
-              // 顯示 PAUSED 字樣（可調整位置與字體大小）
-              g.setColor(Color.YELLOW);
-              g.setFont(new Font("Arial", Font.BOLD, 24));
-              g.drawString("PAUSED", 10, 60);
-              return; // 不畫出方塊
-          }
-      
-          if (nextPiece != null) {
-              g.setColor(nextPiece.getColor());
-              for (Point p : nextPiece.getBlocks()) {
-                  int px = (p.y + 1) * CELL_SIZE;
-                  int py = (p.x + 1) * CELL_SIZE;
-                  g.fillRect(px, py, CELL_SIZE, CELL_SIZE);
-              }
-          }
-      }
-
+            super.paintComponent(g);
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, getWidth(), getHeight());
+            g.setFont(new Font("Arial", Font.BOLD, 16));
+            g.setColor(Color.WHITE);
+            g.drawString("Next:", 10, 20);
+            if (paused) {
+                g.setColor(Color.YELLOW);
+                g.setFont(new Font("Arial", Font.BOLD, 24));
+                g.drawString("PAUSED", 10, 60);
+                return;
+            }
+            if (nextPiece != null) {
+                g.setColor(nextPiece.getColor());
+                for (Point p : nextPiece.getBlocks()) {
+                    int px = (p.y + 1) * CELL_SIZE;
+                    int py = (p.x + 1) * CELL_SIZE;
+                    g.fillRect(px, py, CELL_SIZE, CELL_SIZE); }
+            }
+        }
     }
-    
-    public class SoundPlayer {
-       public static void playSound(String path) {
-           try {
-               AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(path));
-               Clip clip = AudioSystem.getClip();
-               clip.open(audioInputStream);
-               FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-               // 設定音量（以 decibel 為單位，0.0f 為原始音量，負數是減小音量）
-               gainControl.setValue(-30f); // 例如 -10.0f 表示小聲一點
-               clip.start();
-           } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-               e.printStackTrace();
-           }
-       }
-   }
+
+    public static class SoundPlayer {
+        public static void playSound(String path) {
+            try {
+                AudioInputStream ais = AudioSystem.getAudioInputStream(new File(path));
+                Clip clip = AudioSystem.getClip();
+                clip.open(ais);
+                FloatControl fc = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                fc.setValue(-30f);
+                clip.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new TetrisGame().setVisible(true));

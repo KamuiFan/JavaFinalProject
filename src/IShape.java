@@ -1,7 +1,7 @@
-import java.util.Arrays;
-import java.awt.Point;
-import java.util.List;
 import java.awt.Color;
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.List;
 
 public class IShape extends Tetromino {
     private boolean vertical;
@@ -33,9 +33,14 @@ public class IShape extends Tetromino {
     public Tetromino getRotated() {
         return rotateClockwise();
     }
-    
+
     @Override
     public Color getColor() {
         return Color.CYAN; // I型方塊顏色設為青色
+    }
+
+    @Override
+    public Tetromino copy() {
+        return new IShape(this.row, this.col, this.vertical);
     }
 }

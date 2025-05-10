@@ -1,13 +1,13 @@
-import java.util.Arrays;
-import java.awt.Point;
-import java.util.List;
 import java.awt.Color;
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.List;
 
 public class JShape extends Tetromino {
     private int rotation;
 
     public JShape(int row, int col, int rotation) {
-        super(row, col); // 呼叫父類別的建構子
+        super(row, col);
         this.rotation = rotation % 4;
     }
 
@@ -23,21 +23,26 @@ public class JShape extends Tetromino {
 
     @Override
     public Tetromino rotateClockwise() {
-        return new JShape(row, col, (rotation + 1) % 4); // 確保旋轉後的角度在0到3之間
+        return new JShape(row, col, (rotation + 1) % 4);
     }
 
     @Override
     public Tetromino rotateCounterClockwise() {
-        return new JShape(row, col, (rotation + 3) % 4); // 確保旋轉後的角度在0到3之間
+        return new JShape(row, col, (rotation + 3) % 4);
     }
 
     @Override
     public Tetromino getRotated() {
-        return rotateClockwise(); // 可以選擇順時針或逆時針旋轉，這裡選擇順時針
+        return rotateClockwise();
     }
-    
+
     @Override
     public Color getColor() {
-        return Color.BLUE; // T型方塊顏色設為紫色
+        return Color.BLUE;
+    }
+
+    @Override
+    public Tetromino copy() {
+        return new JShape(this.row, this.col, this.rotation);
     }
 }

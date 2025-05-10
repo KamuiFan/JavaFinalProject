@@ -1,7 +1,7 @@
-import java.util.Arrays;
-import java.awt.Point;
-import java.util.List;
 import java.awt.Color;
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.List;
 
 public class LShape extends Tetromino {
     private int rotation;
@@ -35,9 +35,15 @@ public class LShape extends Tetromino {
     public Tetromino getRotated() {
         return rotateClockwise(); // 可以選擇順時針或逆時針旋轉，這裡選擇順時針
     }
-    
+
     @Override
     public Color getColor() {
-        return Color.ORANGE; // T型方塊顏色設為紫色
+        return Color.ORANGE; // L型方塊顏色設為橙色
+    }
+
+    // 新增的 copy() 方法
+    @Override
+    public Tetromino copy() {
+        return new LShape(this.row, this.col, this.rotation); // 複製當前 LShape 物件的狀態
     }
 }

@@ -1,7 +1,7 @@
-import java.util.Arrays;
-import java.awt.Point;
-import java.util.List;
 import java.awt.Color;
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.List;
 
 public class SShape extends Tetromino {
     private boolean vertical;
@@ -13,11 +13,10 @@ public class SShape extends Tetromino {
 
     @Override
     public List<Point> getBlocks() {
-    return vertical
-        ? Arrays.asList(new Point(-1, 0), new Point(0, 0), new Point(0, 1), new Point(1, 1))
-        : Arrays.asList(new Point(0, 0), new Point(0, 1), new Point(1, -1), new Point(1, 0));
-      }  
-
+        return vertical
+            ? Arrays.asList(new Point(-1, 0), new Point(0, 0), new Point(0, 1), new Point(1, 1))
+            : Arrays.asList(new Point(0, 0), new Point(0, 1), new Point(1, -1), new Point(1, 0));
+    }
 
     @Override
     public Tetromino rotateClockwise() {
@@ -31,11 +30,16 @@ public class SShape extends Tetromino {
 
     @Override
     public Tetromino getRotated() {
-        return rotateClockwise(); // 可以選擇順時針或逆時針旋轉，這裡選擇順時針
+        return rotateClockwise();
     }
-    
+
     @Override
     public Color getColor() {
-        return Color.GREEN; // T型方塊顏色設為紫色
+        return Color.GREEN;
+    }
+
+    @Override
+    public Tetromino copy() {
+        return new SShape(row, col, vertical); // 返回當前物件的副本
     }
 }

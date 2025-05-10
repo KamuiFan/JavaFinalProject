@@ -1,7 +1,7 @@
-import java.util.Arrays;
-import java.awt.Point;
-import java.util.List;
 import java.awt.Color;
+import java.awt.Point;
+import java.util.Arrays;
+import java.util.List;
 
 public class OShape extends Tetromino {
     public OShape(int row, int col) {
@@ -34,5 +34,9 @@ public class OShape extends Tetromino {
     @Override
     public Color getColor() {
         return Color.YELLOW; // O型方塊顏色設為黃色
+    }
+
+    public Tetromino copy() {
+        return new OShape(row, col);  // 回傳一個新的 OShape 物件
     }
 }

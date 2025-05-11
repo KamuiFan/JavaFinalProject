@@ -144,6 +144,7 @@ public class TetrisGame extends JFrame {
         if (!collision(currentPiece, 0, dx)) {
             currentPiece.col += dx;
             SoundPlayer.playSound("Sound Effects/move_piece.wav");
+            System.out.println("左右移動");
         }
     }
 
@@ -157,6 +158,7 @@ public class TetrisGame extends JFrame {
         } else {
             addPieceToBoard(currentPiece);
             SoundPlayer.playSound("Sound Effects/piece_landed.wav");
+            System.out.println("落地");
             clearFullRows();
             spawnPiece();
             return false;
@@ -165,11 +167,24 @@ public class TetrisGame extends JFrame {
 
     private void rotatePiece() {
         Tetromino rotated = currentPiece.getRotated();
-        if (!collision(rotated, 0, 0)) {
-            currentPiece = rotated;
-            SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
+
+        // 嘗試這些橫向偏移量來"踢牆"
+        int[] kicks = {0, -1, 1, -2, 2};
+
+        for (int dx : kicks) {
+            rotated.col = currentPiece.col + dx;
+            rotated.row = currentPiece.row;  // 確保 row 沒改
+            if (!collision(rotated, 0, 0)) {
+                currentPiece = rotated;
+                SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
+                System.out.println("旋轉方塊 (kick: " + dx + ")");
+                return;
+            }
         }
+
+        // 所有補償都失敗，不旋轉
     }
+
 
     private Tetromino getGhostPiece(Tetromino piece) {
         Tetromino ghost = piece.copy();
@@ -258,18 +273,22 @@ public class TetrisGame extends JFrame {
                     case 1:
                         score += 40;
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        System.out.println("+40");
                         break;
                     case 2:
                         score += 100;
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        System.out.println("+100");
                         break;
                     case 3:
                         score += 300;
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        System.out.println("+300");
                         break;
                     case 4:
                         score += 1200;
                         SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
+                        System.out.println("+1200");
                         break;
                 }
 
@@ -412,7 +431,7 @@ public class TetrisGame extends JFrame {
                 Clip clip = AudioSystem.getClip();
                 clip.open(ais);
                 FloatControl fc = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                fc.setValue(-30f);
+                fc.setValue(-20f);
                 clip.start();
             } catch (Exception e) {
                 e.printStackTrace();

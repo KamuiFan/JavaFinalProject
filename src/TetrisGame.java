@@ -2,14 +2,13 @@
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import javax.sound.sampled.*;
+import java.util.prefs.Preferences;
 import javax.swing.*;
 
 public class TetrisGame extends JFrame {
@@ -37,15 +36,20 @@ public class TetrisGame extends JFrame {
     private boolean longPressSoundPlayed = false;
     private final int longPressThreshold = 500;  // 長按判定時間 (ms)
 
-    private final int normalDelay = 500;
     private boolean pendingSpawn = false;
+    private Preferences prefs = Preferences.userNodeForPackage(TetrisGame.class);
+    private int highScore = 0;
+    private int highestLevel = 0;
+    
 
     public TetrisGame() {
         setTitle("Tetris");
         setSize(COLS * CELL_SIZE + 16 + 6 * CELL_SIZE, ROWS * CELL_SIZE + 39);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
+        
+        highScore = prefs.getInt("high_score", 0);
+        highestLevel = prefs.getInt("highest_level", 0);
         gamePanel = new GamePanel();
         nextPanel = new NextPanel();
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -81,7 +85,7 @@ public class TetrisGame extends JFrame {
                     // 長按聲效偵測
                     if (!longPressSoundPlayed && longPressTimer == null) {
                         longPressTimer = new javax.swing.Timer(longPressThreshold, ev -> {
-                            SoundPlayer.playSound("Sound Effects/player_sending_blocks.wav");
+                            SoundManager.playSoundEffect("Sound Effects/player_sending_blocks.wav");
                             longPressSoundPlayed = true;
                             longPressTimer.stop();
                             longPressTimer = null;
@@ -99,7 +103,6 @@ public class TetrisGame extends JFrame {
                     while (movePieceDown()) {
                         // 持續向下移，直到無法再下移
                     }
-                    SoundPlayer.playSound("Sound Effects/piece_landed.wav"); // 可選：加上硬降音效
                 }
                 repaintAll();
             }
@@ -131,8 +134,9 @@ public class TetrisGame extends JFrame {
             movePieceDown();
             repaintAll();
         });
-
+        SoundManager.playBackgroundMusic("Sound Effects/bgm.wav");
         timer.start();
+        
     }
 
     private void repaintAll() {
@@ -151,7 +155,7 @@ public class TetrisGame extends JFrame {
         }
         if (!collision(currentPiece, 0, dx)) {
             currentPiece.col += dx;
-            SoundPlayer.playSound("Sound Effects/move_piece.wav");
+            SoundManager.playSoundEffect("Sound Effects/move_piece.wav");
             //System.out.println("左右移動");
         }
     }
@@ -165,7 +169,7 @@ public class TetrisGame extends JFrame {
             return true;
         } else {
             addPieceToBoard(currentPiece);
-            SoundPlayer.playSound("Sound Effects/piece_landed.wav");
+            SoundManager.playSoundEffect("Sound Effects/piece_landed.wav");
             clearFullRows();
 
             pendingSpawn = true;  // 表示準備生成新方塊，但還沒生成
@@ -197,7 +201,7 @@ public class TetrisGame extends JFrame {
             rotated.row = currentPiece.row;  // 確保 row 沒改
             if (!collision(rotated, 0, 0)) {
                 currentPiece = rotated;
-                SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
+                SoundManager.playSoundEffect("Sound Effects/rotate_piece.wav");
                 //System.out.println("旋轉方塊 (kick: " + dx + ")");
                 return;
             }
@@ -292,22 +296,22 @@ public class TetrisGame extends JFrame {
                 switch (fullRows.size()) {
                     case 1:
                         score += 40 * (level + 1);
-                        SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        SoundManager.playSoundEffect("Sound Effects/line_clear.wav");
                         System.out.println(40 * (level + 1));
                         break;
                     case 2:
                         score += 100 * (level + 1);
-                        SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        SoundManager.playSoundEffect("Sound Effects/line_clear.wav");
                         System.out.println(100 * (level + 1));
                         break;
                     case 3:
                         score += 300 * (level + 1);
-                        SoundPlayer.playSound("Sound Effects/line_clear.wav");
+                        SoundManager.playSoundEffect("Sound Effects/line_clear.wav");
                         System.out.println(300 * (level + 1));
                         break;
                     case 4:
                         score += 1200 * (level + 1);
-                        SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
+                        SoundManager.playSoundEffect("Sound Effects/tetris_4_lines.wav");
                         System.out.println(1200 * (level + 1));
                         break;
                 }
@@ -339,9 +343,33 @@ public class TetrisGame extends JFrame {
         if (collision(currentPiece, 0, 0)) {
             gameOver = true;
             timer.stop();
-            SoundPlayer.playSound("Sound Effects/game_over.wav");
-            JOptionPane.showMessageDialog(this, "Game Over!\nScore: " + score);
+            SoundManager.stopBackgroundMusic();
+            SoundManager.playSoundEffect("Sound Effects/death.wav");
+            if (score > highScore) {
+                highScore = score;
+                prefs.putInt("high_score", highScore);
+            }
+
+            if (level > highestLevel) {
+                highestLevel = level;
+                prefs.putInt("highest_level", highestLevel);
+            }
+
+            String message = String.format(
+                "Game Over\nYour Score: %d\nYour Level: %d\n\nHigh Score: %d\nHighest Level: %d",
+                score, level, highScore, highestLevel
+            );
+            JOptionPane.showMessageDialog(this, message);
+
+            int option = JOptionPane.showConfirmDialog(this,
+                    "Game Over!\nDo you want to restart?",
+                    "Game Over",
+                    JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                restartGame();
+            }
         }
+
     }
 
     private Tetromino getNextPieceFromBag() {
@@ -364,6 +392,33 @@ public class TetrisGame extends JFrame {
         Tetromino next = pieceBag.remove(0);
         return next;
     }
+
+    private void restartGame() {
+        // 清空遊戲資料
+        for (int r = 0; r < ROWS; r++) {
+            Arrays.fill(board[r], null);
+        }
+        score = 0;
+        level = 0;
+        linesCleared = 0;
+        gameOver = false;
+        paused = false;
+        pieceBag.clear();
+        nextPiece = null;
+        pendingSpawn = false;
+
+        // 重設計時器延遲與開始
+        timer.setDelay(calculateDelay());
+        timer.start();
+
+        // 播放背景音樂
+        SoundManager.playBackgroundMusic("Sound Effects/bgm.wav");
+
+        // 生成新方塊
+        spawnPiece();
+        repaintAll();
+    }
+
 
     class GamePanel extends JPanel {
 
@@ -442,23 +497,6 @@ public class TetrisGame extends JFrame {
             }
         }
     }
-
-    public static class SoundPlayer {
-
-        public static void playSound(String path) {
-            try {
-                AudioInputStream ais = AudioSystem.getAudioInputStream(new File(path));
-                Clip clip = AudioSystem.getClip();
-                clip.open(ais);
-                FloatControl fc = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                fc.setValue(-20f);
-                clip.start();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new TetrisGame().setVisible(true));
     }

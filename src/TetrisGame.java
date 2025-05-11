@@ -18,16 +18,16 @@ public class TetrisGame extends JFrame {
     public static final int CELL_SIZE = 30;
 
     private GamePanel gamePanel;
-    private Color[][] board = new Color[ROWS][COLS];
-    private Tetromino currentPiece;
+    public Color[][] board = new Color[ROWS][COLS];
+    public  Tetromino currentPiece;
     private javax.swing.Timer timer;
-    private int score = 0;
+    public  int score = 0;
     private boolean gameOver = false;
     private Tetromino nextPiece;
     private NextPanel nextPanel;
     private boolean paused = false;
-    private int linesCleared = 0;             // 累計消除行數
-    private int level = 0;                    // 目前等級
+    public  int linesCleared = 0;             // 累計消除行數
+    public  int level = 0;                    // 目前等級
     private final int baseDelay = 500;        // Level 1 時的初始 delay
     private final int delayStep = 50;         // 每升一級，delay 減少多少毫秒
     private List<Tetromino> pieceBag = new ArrayList<>();
@@ -50,7 +50,7 @@ public class TetrisGame extends JFrame {
         
         highScore = prefs.getInt("high_score", 0);
         highestLevel = prefs.getInt("highest_level", 0);
-        gamePanel = new GamePanel();
+        gamePanel = new GamePanel(this);
         nextPanel = new NextPanel();
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(gamePanel, BorderLayout.CENTER);
@@ -210,7 +210,7 @@ public class TetrisGame extends JFrame {
         // 所有補償都失敗，不旋轉
     }
 
-    private Tetromino getGhostPiece(Tetromino piece) {
+    public Tetromino getGhostPiece(Tetromino piece) {
         Tetromino ghost = piece.copy();
         while (!collision(ghost, 1, 0)) {
             ghost.row++;
@@ -417,53 +417,6 @@ public class TetrisGame extends JFrame {
         // 生成新方塊
         spawnPiece();
         repaintAll();
-    }
-
-
-    class GamePanel extends JPanel {
-
-        public GamePanel() {
-            setBackground(Color.BLACK);
-        }
-
-        @Override
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            for (int r = 0; r < ROWS; r++) {
-                for (int c = 0; c < COLS; c++) {
-                    if (board[r][c] != null) {
-                        g.setColor(board[r][c]);
-                        g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                    } else {
-                        g.setColor(Color.LIGHT_GRAY);
-                        g.drawRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                    }
-                }
-            }
-            if (currentPiece != null) {
-                // ✅ 1. 畫影子方塊（淺灰色）
-                Tetromino ghost = getGhostPiece(currentPiece);
-                g.setColor(new Color(200, 200, 200, 150)); // 淺灰、半透明
-                for (Point p : ghost.getBlocks()) {
-                    int r = ghost.row + p.x;
-                    int c = ghost.col + p.y;
-                    g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                }
-
-                // ✅ 2. 畫實際目前方塊
-                g.setColor(currentPiece.getColor());
-                for (Point p : currentPiece.getBlocks()) {
-                    int r = currentPiece.row + p.x;
-                    int c = currentPiece.col + p.y;
-                    g.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                }
-            }
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 18));
-            g.drawString("Score: " + score, 10, 20);
-            g.drawString("Level: " + level, 10, 40);
-            g.drawString("Lines: " + linesCleared, 10, 60);
-        }
     }
 
     class NextPanel extends JPanel {

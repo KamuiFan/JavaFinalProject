@@ -38,6 +38,7 @@ public class TetrisGame extends JFrame {
     private final int longPressThreshold = 500;  // 長按判定時間 (ms)
 
     private final int normalDelay = 500;
+    private boolean pendingSpawn = false;
 
     public TetrisGame() {
         setTitle("Tetris");
@@ -118,12 +119,15 @@ public class TetrisGame extends JFrame {
 
         spawnPiece();
         timer = new javax.swing.Timer(calculateDelay(), e -> {
-            if (gameOver || paused) {
-                return;
-            }
+            if (gameOver || paused) return;
+
+            // 如果正在等待延遲 spawn，就不要移動
+            if (pendingSpawn) return;
+
             movePieceDown();
             repaintAll();
         });
+
         timer.start();
     }
 
@@ -144,12 +148,12 @@ public class TetrisGame extends JFrame {
         if (!collision(currentPiece, 0, dx)) {
             currentPiece.col += dx;
             SoundPlayer.playSound("Sound Effects/move_piece.wav");
-            System.out.println("左右移動");
+            //System.out.println("左右移動");
         }
     }
 
     private boolean movePieceDown() {
-        if (currentPiece == null) {
+        if (currentPiece == null || pendingSpawn) {
             return false;
         }
         if (!collision(currentPiece, 1, 0)) {
@@ -158,12 +162,24 @@ public class TetrisGame extends JFrame {
         } else {
             addPieceToBoard(currentPiece);
             SoundPlayer.playSound("Sound Effects/piece_landed.wav");
-            System.out.println("落地");
             clearFullRows();
-            spawnPiece();
+            
+            pendingSpawn = true;  // 表示準備生成新方塊，但還沒生成
+
+            new javax.swing.Timer(300, e2 -> {
+                spawnPiece();
+                pendingSpawn = false;  // 重設旗標
+                gamePanel.repaint();
+                nextPanel.repaint();
+            }) {{
+                setRepeats(false);
+                start();
+            }};
+
             return false;
         }
     }
+
 
     private void rotatePiece() {
         Tetromino rotated = currentPiece.getRotated();
@@ -177,14 +193,13 @@ public class TetrisGame extends JFrame {
             if (!collision(rotated, 0, 0)) {
                 currentPiece = rotated;
                 SoundPlayer.playSound("Sound Effects/rotate_piece.wav");
-                System.out.println("旋轉方塊 (kick: " + dx + ")");
+                //System.out.println("旋轉方塊 (kick: " + dx + ")");
                 return;
             }
         }
 
         // 所有補償都失敗，不旋轉
     }
-
 
     private Tetromino getGhostPiece(Tetromino piece) {
         Tetromino ghost = piece.copy();

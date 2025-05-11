@@ -119,10 +119,14 @@ public class TetrisGame extends JFrame {
 
         spawnPiece();
         timer = new javax.swing.Timer(calculateDelay(), e -> {
-            if (gameOver || paused) return;
+            if (gameOver || paused) {
+                return;
+            }
 
             // 如果正在等待延遲 spawn，就不要移動
-            if (pendingSpawn) return;
+            if (pendingSpawn) {
+                return;
+            }
 
             movePieceDown();
             repaintAll();
@@ -163,7 +167,7 @@ public class TetrisGame extends JFrame {
             addPieceToBoard(currentPiece);
             SoundPlayer.playSound("Sound Effects/piece_landed.wav");
             clearFullRows();
-            
+
             pendingSpawn = true;  // 表示準備生成新方塊，但還沒生成
 
             new javax.swing.Timer(300, e2 -> {
@@ -171,15 +175,16 @@ public class TetrisGame extends JFrame {
                 pendingSpawn = false;  // 重設旗標
                 gamePanel.repaint();
                 nextPanel.repaint();
-            }) {{
-                setRepeats(false);
-                start();
-            }};
+            }) {
+                {
+                    setRepeats(false);
+                    start();
+                }
+            };
 
             return false;
         }
     }
-
 
     private void rotatePiece() {
         Tetromino rotated = currentPiece.getRotated();
@@ -286,24 +291,24 @@ public class TetrisGame extends JFrame {
                 // 計算並加分
                 switch (fullRows.size()) {
                     case 1:
-                        score += 40;
+                        score += 40 * (level + 1);
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                        System.out.println("+40");
+                        System.out.println(40 * (level + 1));
                         break;
                     case 2:
-                        score += 100;
+                        score += 100 * (level + 1);
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                        System.out.println("+100");
+                        System.out.println(100 * (level + 1));
                         break;
                     case 3:
-                        score += 300;
+                        score += 300 * (level + 1);
                         SoundPlayer.playSound("Sound Effects/line_clear.wav");
-                        System.out.println("+300");
+                        System.out.println(300 * (level + 1));
                         break;
                     case 4:
-                        score += 1200;
+                        score += 1200 * (level + 1);
                         SoundPlayer.playSound("Sound Effects/tetris_4_lines.wav");
-                        System.out.println("+1200");
+                        System.out.println(1200 * (level + 1));
                         break;
                 }
 

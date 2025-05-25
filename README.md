@@ -1,5 +1,4 @@
  # 2025 Java俄羅斯方塊
----
 - 學號：B11207034
 - 姓名：范雲翔
 - 工作說明：整體遊戲製作
@@ -10,51 +9,191 @@
     - 分數機制
     - 難度機制
   ## 遊戲說明
-  ---
-- 共7種方塊
-- 加入鬼影
+- **共7種方塊**
+- **加入鬼影**
 - 操作說明：
-1. 移動方塊：`←`、`→`方向鍵
-2. 旋轉方塊：`↑`方向鍵
-3. 軟降：`↓
+1. 移動方塊：`←`、`→`
+2. 旋轉方塊：`↑`
+3. 軟降：`↓`
 4. 硬降：`space`
 5. 暫停/繼續：`P`
+## 執行檔說明
+點擊執行TetrisGame.jar即可開始遊玩
+# 流程圖
 ```mermaid
 flowchart TD
-    A["Start Game main()"] --> B["Create TetrisGame object"]
-    B --> C["Constructor: initialize screen and load high score"]
-    C --> D["Add keyboard listener"]
-    D --> E["spawnPiece(): generate first block"]
-    E --> F["Start Timer to call movePieceDown() every delay"]
+    A["main()"] --> B["建立 TetrisGame 視窗"]
+    B --> C["初始化遊戲資料與介面"]
+    C --> D["啟動 timer 與背景音樂"]
+    D --> E["等待玩家操作"]
 
-    subgraph Keyboard Events
-        K1["Key Pressed"] --> |Arrow keys, Space| K2["Move or rotate currentPiece"]
-        K2 --> K3["Check collision and update position"]
-        K3 --> K4["repaintAll()"]
-        K1 --> |P key| K5["Toggle paused state, start/stop Timer"]
+    E -->|"鍵盤事件"| F{"按鍵類型"}
+    F -->|"DOWN"| G["movePieceDown()"]
+    F -->|"LEFT/RIGHT"| H["movePiece(-1/1)"]
+    F -->|"UP"| I["rotatePiece()"]
+    F -->|"SPACE"| J["快速下落"]
+    F -->|"P"| K["暫停/繼續"]
+    F -->|"其他"| E
+
+    G --> L{"是否碰撞"}
+    L -->|"否"| M["方塊下移"]
+    L -->|"是"| N["addPieceToBoard()"]
+    N --> O["clearFullRows()"]
+    O --> P{"有消行?"}
+    P -->|"有"| Q["加分/升級/播放音效"]
+    P -->|"無"| R["生成新方塊"]
+    Q --> R
+    R --> S{"遊戲結束?"}
+    S -->|"否"| E
+    S -->|"是"| T["停止 timer 與音樂"]
+    T --> U["顯示 Game Over 視窗"]
+    U -->|"Restart"| C
+    U -->|"結束"| V["程式結束"]
+
+    H --> E
+    I --> E
+    J --> E
+    K --> E
+
+```
+# UML類別圖
+```mermaid
+classDiagram
+    class TetrisGame {
+        - GamePanel gamePanel
+        - Color[][] board
+        - Tetromino currentPiece
+        - javax.swing.Timer timer
+        - int score
+        - boolean gameOver
+        - Tetromino nextPiece
+        - NextPanel nextPanel
+        - boolean paused
+        - int linesCleared
+        - int level
+        - int baseDelay
+        - int delayStep
+        - List~Tetromino~ pieceBag
+        - javax.swing.Timer longPressTimer
+        - boolean longPressSoundPlayed
+        - int longPressThreshold
+        - boolean pendingSpawn
+        - Preferences prefs
+        - int highScore
+        - int highestLevel
+        + TetrisGame()
+        + main(String[] args)
+        - repaintAll()
+        - calculateDelay()
+        - movePiece(int dx)
+        - boolean movePieceDown()
+        - rotatePiece()
+        - Tetromino getGhostPiece(Tetromino piece)
+        - boolean collision(Tetromino piece, int dRow, int dCol)
+        - addPieceToBoard(Tetromino piece)
+        - clearFullRows()
+        - spawnPiece()
+        - Tetromino getNextPieceFromBag()
+        - restartGame()
+    }
+
+    class NextPanel {
+        + NextPanel()
+        + paintComponent(Graphics g)
+    }
+
+    TetrisGame "1" *-- "1" NextPanel
+    TetrisGame "1" *-- "1" GamePanel
+    TetrisGame "1" o-- "1" Tetromino
+    TetrisGame "1" o-- "1" Preferences
+    TetrisGame "1" o-- "1" javax.swing.Timer
+
+    class Tetromino {
+        +int row
+        +int col
+        +Color color
+        +getBlocks() List~Point~
+        +getColor() Color
+        +getRotated() Tetromino
+        +copy() Tetromino
+    }
+
+    class IShape {
+        +IShape(int row, int col, boolean vertical)
+    }
+    class OShape {
+        +OShape(int row, int col)
+    }
+    class TShape {
+        +TShape(int row, int col, int rotation)
+    }
+    class SShape {
+        +SShape(int row, int col, boolean vertical)
+    }
+    class ZShape {
+        +ZShape(int row, int col, boolean vertical)
+    }
+    class JShape {
+        +JShape(int row, int col, int rotation)
+    }
+    class LShape {
+        +LShape(int row, int col, int rotation)
+    }
+
+    Tetromino <|-- IShape
+    Tetromino <|-- OShape
+    Tetromino <|-- TShape
+    Tetromino <|-- SShape
+    Tetromino <|-- ZShape
+    Tetromino <|-- JShape
+    Tetromino <|-- LShape
+
+    class GamePanel
+    class Preferences
+    class javax.swing.Timer
+```
+# 時序圖
+```mermaid
+sequenceDiagram
+    participant User
+    participant TetrisGame
+    participant Timer
+    participant SoundManager
+    participant GamePanel
+    participant NextPanel
+
+    User->>TetrisGame: main()
+    TetrisGame->>TetrisGame: 初始化資料、UI、計時器
+    TetrisGame->>SoundManager: playBackgroundMusic("/Sound Effects/bgm.wav")
+    TetrisGame->>Timer: start()
+
+    loop 遊戲進行中
+        Timer->>TetrisGame: timer 觸發 (movePieceDown)
+        TetrisGame->>TetrisGame: movePieceDown()
+        alt 無碰撞
+            TetrisGame->>TetrisGame: currentPiece.row++
+        else 有碰撞
+            TetrisGame->>TetrisGame: addPieceToBoard()
+            TetrisGame->>SoundManager: playSoundEffect("/Sound Effects/piece_landed.wav")
+            TetrisGame->>TetrisGame: clearFullRows()
+            alt 有消行
+                TetrisGame->>SoundManager: playSoundEffect("/Sound Effects/line_clear.wav")
+            end
+            TetrisGame->>TetrisGame: spawnPiece()
+            alt 遊戲結束
+                TetrisGame->>SoundManager: stopBackgroundMusic()
+                TetrisGame->>SoundManager: playSoundEffect("/Sound Effects/death.wav")
+            end
+        end
+        TetrisGame->>GamePanel: repaint()
+        TetrisGame->>NextPanel: repaint()
     end
 
-    F --> G{Collision?}
-    G --> |No| H["Move block down by one"]
-    G --> |Yes| I["addPieceToBoard()"]
-    I --> J["Play piece_landed sound"]
-    J --> K["clearFullRows()"]
-    K --> L["Delay before spawning new block"]
-
-    L --> M["After 300ms, call spawnPiece()"]
-    M --> N{Game Over?}
-    N --> |No| F
-    N --> |Yes| O["Stop Timer and show Game Over dialog"]
-
-    O --> P{Player chooses to restart?}
-    P --> |Yes| Q["restartGame()"]
-    Q --> E
-    P --> |No| R["End"]
-
-    subgraph clearFullRows
-        K1c["Check if each row is full"] --> K2c["Flash animation"]
-        K2c --> K3c["Remove full rows and shift down"]
-        K3c --> K4c["Add score and level up"]
+    User->>TetrisGame: 按鍵 (上下左右/空白/P)
+    TetrisGame->>TetrisGame: 處理鍵盤事件
+    alt 需要音效
+        TetrisGame->>SoundManager: playSoundEffect(...)
     end
-
+    TetrisGame->>GamePanel: repaint()
+    TetrisGame->>NextPanel: repaint()
 ```

@@ -24,8 +24,9 @@
            每消除4行→(當前等級+1)*1200分  
 ## 執行檔說明
 點擊執行TetrisGame.jar即可開始遊玩
-## 影片連結
-[請點擊此處](https://youtu.be/cxrXp0DB0IQ)
+## 影片、簡報
+[影片連結](https://youtu.be/cxrXp0DB0IQ)  
+[簡報連結](https://www.canva.com/design/DAGoenGEhiU/hIwzYMSE3-XANpvIaQGJ2Q/edit?utm_content=DAGoenGEhiU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 # 流程圖
 ```mermaid
 flowchart TD
